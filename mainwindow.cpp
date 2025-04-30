@@ -1,9 +1,10 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
+#include <QDebug>
 #include <QRegularExpression>
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
@@ -13,15 +14,28 @@ MainWindow::MainWindow(QWidget *parent)
     });
 }
 
+QStringList splitlines(const QString& str)
+{
+    return str.split(QRegularExpression("\r?\n"));
+}
+
 void MainWindow::OnPushButtonClicked()
 {
     this->ui->plainTextEdit_2->clear();
-    const char *sql_template
-        = "SELECT setval('{seq}', COALESCE((SELECT MAX(id) FROM {table}), 0) + 1);";
+    QString sql_template
+        = "SELECT setval('%1', COALESCE((SELECT MAX(id) FROM %2), 0) + 1);";
     auto content = this->ui->plainTextEdit->toPlainText();
-    auto lines = content.split(QRegularExpression("\r?\n"));
-    for (const auto &line : lines) {
-        this->ui->plainTextEdit_2->appendPlainText(line);
+    auto lines = splitlines(content);
+    for (const auto& line : lines) {
+        auto seq = line.simplified();
+        if (seq.indexOf("_id_seq") == -1) {
+            continue;
+        }
+        auto table = seq.section("_id_seq", 0, 0).simplified();
+        qDebug() << seq;
+        qDebug() << table;
+        this->ui->plainTextEdit_2->appendPlainText(sql_template.arg(seq, table));
+        this->ui->plainTextEdit_2->selectAll();
     }
 }
 
